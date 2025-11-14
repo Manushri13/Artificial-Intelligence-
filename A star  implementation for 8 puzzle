@@ -1,0 +1,93 @@
+import heapq
+
+# Goal state (for 8-puzzle)
+GOAL = ((1,2,3),
+        (4,5,6),
+        (7,8,0))
+
+# Helper: Find position of value in state
+def find_position(state, value):
+    for i in range(3):
+        for j in range(3):
+            if state[i][j] == value:
+                return i, j
+    return None
+
+# --------- HEURISTICS ---------
+def misplaced_tiles(state):
+    count = 0
+    for i in range(3):
+        for j in range(3):
+            if state[i][j] != 0 and state[i][j] != GOAL[i][j]:
+                count += 1
+    return count
+
+def manhattan_distance(state):
+    dist = 0
+    for i in range(3):
+        for j in range(3):
+            if state[i][j] != 0:
+                val = state[i][j]
+                goal_i, goal_j = find_position(GOAL, val)
+                dist += abs(i - goal_i) + abs(j - goal_j)
+    return dist
+
+# --------- A* SEARCH ---------
+def a_star(start_state, heuristic="manhattan"):
+    open_list = []
+    closed_set = set()
+
+    if heuristic == "manhattan":
+        h = manhattan_distance
+    else:
+        h = misplaced_tiles
+
+    heapq.heappush(open_list, (h(start_state), 0, start_state, []))
+
+    while open_list:
+        f, g, current, path = heapq.heappop(open_list)
+
+        if current == GOAL:
+            return path + [current]
+
+        closed_set.add(current)
+
+        # Find blank tile (0)
+        x, y = find_position(current, 0)
+
+        # Possible moves
+        moves = [
+            (x - 1, y),  # Up
+            (x + 1, y),  # Down
+            (x, y - 1),  # Left
+            (x, y + 1)   # Right
+        ]
+
+        for nx, ny in moves:
+            if 0 <= nx < 3 and 0 <= ny < 3:
+                new_state = [list(row) for row in current]
+                new_state[x][y], new_state[nx][ny] = new_state[nx][ny], new_state[x][y]
+                new_state = tuple(tuple(row) for row in new_state)
+
+                if new_state in closed_set:
+                    continue
+
+                new_g = g + 1
+                new_f = new_g + h(new_state)
+
+                heapq.heappush(open_list, (new_f, new_g, new_state, path + [current]))
+
+    return None
+
+# --------- TEST EXAMPLE ---------
+start = ((1, 2, 3),
+         (4, 0, 6),
+         (7, 5, 8))
+
+solution = a_star(start, heuristic="manhattan")  # or "misplaced"
+
+print("Number of steps:", len(solution) - 1)
+for s in solution:
+    for row in s:
+        print(row)
+    print()
