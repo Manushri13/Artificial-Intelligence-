@@ -1,0 +1,44 @@
+# -------------------------------------------------
+# Forward Chaining Inference Engine
+# -------------------------------------------------
+
+def forward_chaining(rules, facts):
+    facts = set(facts)        # Known true facts
+    added = True
+
+    while added:
+        added = False
+        for rule in rules:
+            premises, conclusion = rule
+
+            # Check if all premises are true
+            if all(p in facts for p in premises):
+                if conclusion not in facts:
+                    facts.add(conclusion)
+                    added = True
+                    print(f"Inferred: {conclusion}")
+    
+    return facts
+
+
+# -------------------------------------------------
+# Example Knowledge Base
+# -------------------------------------------------
+
+rules = [
+    (["A"], "B"),                    # A → B
+    (["B", "C"], "D"),               # B ∧ C → D
+    (["D"], "E"),                    # D → E
+    (["A", "C"], "F"),               # A ∧ C → F
+]
+
+facts = ["A", "C"]   # Initial known facts
+
+
+# -------------------------------------------------
+# Run Forward Chaining
+# -------------------------------------------------
+
+result = forward_chaining(rules, facts)
+
+print("\nFinal facts =", result)
