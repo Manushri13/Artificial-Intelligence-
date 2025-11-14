@@ -1,0 +1,75 @@
+import random
+
+# -----------------------------------
+# Count number of attacking pairs
+# -----------------------------------
+def heuristic(board):
+    h = 0
+    n = len(board)
+    for i in range(n):
+        for j in range(i + 1, n):
+            if board[i] == board[j]:              # Same row
+                h += 1
+            if abs(board[i] - board[j]) == j - i: # Same diagonal
+                h += 1
+    return h
+
+
+# -----------------------------------
+# Get best neighbor states
+# -----------------------------------
+def get_best_neighbor(board):
+    n = len(board)
+    best_board = board[:]
+    best_h = heuristic(board)
+
+    for col in range(n):
+        original_row = board[col]
+        for row in range(n):
+            if row != original_row:
+                new_board = board[:]
+                new_board[col] = row
+                h = heuristic(new_board)
+                if h < best_h:
+                    best_h = h
+                    best_board = new_board[:]
+
+    return best_board, best_h
+
+
+# -----------------------------------
+# Hill Climbing Search
+# -----------------------------------
+def hill_climbing(n, max_restarts=100):
+    for _ in range(max_restarts):
+        # Random initial configuration
+        board = [random.randint(0, n - 1) for _ in range(n)]
+        h = heuristic(board)
+
+        while True:
+            neighbor, neighbor_h = get_best_neighbor(board)
+
+            # If no better neighbor → local optimum
+            if neighbor_h >= h:
+                break
+
+            board, h = neighbor, neighbor_h
+
+        # If solved
+        if h == 0:
+            return board
+
+    return None  # No solution found after restarts
+
+
+# -----------------------------------
+# Example Usage
+# -----------------------------------
+n = 8
+solution = hill_climbing(n)
+
+if solution:
+    print("Solution for", n, "queens:")
+    print(solution)
+else:
+    print("No solution found")
