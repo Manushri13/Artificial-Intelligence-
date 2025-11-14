@@ -1,0 +1,144 @@
+# ---------------------------------------------------------
+# Term, Predicate, Clause Representation
+# ---------------------------------------------------------
+
+def is_variable(x):
+    return isinstance(x, str) and x[0].islower()
+
+# ---------------------------------------------------------
+# UNIFICATION
+# ---------------------------------------------------------
+
+def unify(x, y, subst):
+    if subst is None:
+        return None
+    elif x == y:
+        return subst
+    elif is_variable(x):
+        return unify_var(x, y, subst)
+    elif is_variable(y):
+        return unify_var(y, x, subst)
+    elif isinstance(x, tuple) and isinstance(y, tuple) and x[0] == y[0]:
+        return unify(x[1:], y[1:], unify(x[0], y[0], subst))
+    elif isinstance(x, tuple) and isinstance(y, tuple):
+        if len(x) != len(y):
+            return None
+        for xi, yi in zip(x, y):
+            subst = unify(xi, yi, subst)
+            if subst is None:
+                return None
+        return subst
+    else:
+        return None
+
+def unify_var(var, x, subst):
+    if var in subst:
+        return unify(subst[var], x, subst)
+    elif occurs_check(var, x, subst):
+        return None
+    else:
+        new_subst = subst.copy()
+        new_subst[var] = x
+        return new_subst
+
+def occurs_check(var, x, subst):
+    if var == x:
+        return True
+    elif is_variable(x) and x in subst:
+        return occurs_check(var, subst[x], subst)
+    elif isinstance(x, tuple):
+        return any(occurs_check(var, xi, subst) for xi in x)
+    return False
+
+# ---------------------------------------------------------
+# APPLY SUBSTITUTION
+# ---------------------------------------------------------
+
+def apply_subst(sentence, subst):
+    if isinstance(sentence, str):
+        return subst.get(sentence, sentence)
+    elif isinstance(sentence, tuple):
+        return tuple(apply_subst(part, subst) for part in sentence)
+    else:
+        return sentence
+
+# ---------------------------------------------------------
+# RESOLUTION RULE
+# ---------------------------------------------------------
+
+def resolve(clause1, clause2):
+    resolvents = []
+
+    for lit1 in clause1:
+        for lit2 in clause2:
+            if lit1[0] == "¬":
+                p1 = lit1[1]
+                p2 = lit2
+            elif lit2[0] == "¬":
+                p1 = lit1
+                p2 = lit2[1]
+            else:
+                continue
+
+            subst = unify(p1, p2, {})
+            if subst is not None:
+                new_clause = set(
+                    apply_subst(l, subst) 
+                    for l in (set(clause1) | set(clause2))
+                )
+                new_clause.discard(lit1)
+                new_clause.discard(lit2)
+                resolvents.append(tuple(new_clause))
+
+    return resolvents
+
+# ---------------------------------------------------------
+# RESOLUTION-REFUTATION PROCEDURE
+# ---------------------------------------------------------
+
+def fol_resolution(kb, query):
+    clauses = kb.copy()
+    
+    # Add negated query
+    clauses.append(("¬", query))
+
+    new = set()
+
+    while True:
+        pairs = [(clauses[i], clauses[j])
+                 for i in range(len(clauses))
+                 for j in range(i+1, len(clauses))]
+
+        for (c1, c2) in pairs:
+            resolvents = resolve(c1, c2)
+            for r in resolvents:
+                if len(r) == 0:  # empty clause found
+                    print("Derived empty clause: contradiction")
+                    return True
+                new.add(r)
+
+        if new.issubset(set(clauses)):
+            return False
+
+        for c in new:
+            if c not in clauses:
+                clauses.append(c)
+
+# ---------------------------------------------------------
+# EXAMPLE
+# ---------------------------------------------------------
+
+# Example Knowledge Base:
+# 1. Man(x) → Mortal(x)
+# 2. Man(Socrates)
+
+# Converted to CNF:
+kb = [
+    (("¬", ("Man", "x")), ("Mortal", "x")),   # ¬Man(x) ∨ Mortal(x)
+    (("Man", "Socrates"),)                    # Man(Socrates)
+]
+
+query = ("Mortal", "Socrates")
+
+result = fol_resolution(kb, query)
+print("\nQuery entailed:", result)
