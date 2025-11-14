@@ -1,0 +1,40 @@
+import re
+
+# Replace logical symbols with Python operators
+def translate(expr):
+    expr = expr.replace("¬", " not ")
+    expr = expr.replace("∧", " and ")
+    expr = expr.replace("∨", " or ")
+    expr = expr.replace("→", " <= ")   # will interpret later
+    expr = expr.replace("↔", " == ")   # biconditional
+    return expr
+
+# Evaluate logical expression
+def evaluate(expr, values):
+    expr = translate(expr)
+
+    # Replace variables with Boolean values
+    for var, val in values.items():
+        expr = re.sub(rf"\b{var}\b", str(val), expr)
+
+    # Handle implication (P → Q is (not P) or Q)
+    while "<=" in expr:
+        expr = re.sub(r"(True|False)\s*<=\s*(True|False)",
+                      lambda m: str((not eval(m.group(1))) or eval(m.group(2))),
+                      expr)
+
+    return eval(expr)
+
+
+# -----------------------------
+# Example
+# -----------------------------
+expr = "(P → Q) ∧ ¬R"
+
+values = {
+    "P": True,
+    "Q": False,
+    "R": True
+}
+
+print("Result:", evaluate(expr, values))
